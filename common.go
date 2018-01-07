@@ -1,4 +1,4 @@
-package timetools
+package timetool
 
 import "time"
 

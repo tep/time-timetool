@@ -15,7 +15,7 @@
 
 // Package timetools provides tools and utilities for dealing with our most
 // preceious comodity: time.
-package timetools
+package timetool
 
 import (
 	"context"
