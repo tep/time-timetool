@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-// Package timetools provides tools and utilities for dealing with our most
+// Package timetool provides tools and utilities for dealing with our most
 // preceious comodity: time.
 package timetool
 
@@ -29,22 +29,22 @@ const (
 )
 
 var (
-	// MissingDeadlineError is returned by functions expecting a Deadline
+	// ErrMissingDeadline is returned by functions expecting a Deadline
 	// but are passed a Context devoid of such nature.
-	MissingDeadlineError = errors.New("context must have a deadline")
+	ErrMissingDeadline = errors.New("context must have a deadline")
 
-	// TooFewIterationsError is returned by RetryWithBackoff if the number of
+	// ErrTooFewIterations is returned by RetryWithBackoff if the number of
 	// requested iterations is less than 2.
-	TooFewIterationsError = errors.New("number of iterations must be at least 2")
+	ErrTooFewIterations = errors.New("number of iterations must be at least 2")
 
-	// TimeWarpError is returned by RetryWithBackoff in the freakishly uncommon
+	// ErrTimeWarp is returned by RetryWithBackoff in the freakishly uncommon
 	// event that a context ends up with a deadline in the past and a Done
 	// channel that does not return.
-	TimeWarpError = errors.New("valid context has deadline in the past!")
+	ErrTimeWarp = errors.New("valid context has deadline in the past")
 
-	// RetriesExhaustedError is returned by RetryWithBackoff if all retry
+	// ErrRetriesExhausted is returned by RetryWithBackoff if all retry
 	// attempts have been unsuccessful.
-	RetriesExhaustedError = errors.New("all retries exhausted")
+	ErrRetriesExhausted = errors.New("all retries exhausted")
 )
 
 // RetryFunc is a function passed to RetryWithBackoff that should be retried
@@ -63,12 +63,12 @@ type RetryFunc func(i int) bool
 // Note that, even if retry returns true, the deadline is checked a final time
 // and, if it has expired, ctx.Err() is returned.
 //
-// If the provided Context has no defined deadline, MissingDeadlineError is
-// returned. TooFewIterationsError will be returned if iters is less than 2.
-// If each call to retry returns false, RetriesExhaustedError is returned.
+// If the provided Context has no defined deadline, ErrMissingDeadline is
+// returned. ErrTooFewIterations will be returned if iters is less than 2.
+// If each call to retry returns false, ErrRetriesExhausted is returned.
 func RetryWithBackoff(ctx context.Context, iters int, retry RetryFunc) error {
 	if iters < 2 {
-		return TooFewIterationsError
+		return ErrTooFewIterations
 	}
 
 	bos, err := newBackoffSession(ctx, iters)
@@ -86,7 +86,7 @@ func RetryWithBackoff(ctx context.Context, iters int, retry RetryFunc) error {
 		}
 	}
 
-	return contextDoneOr(ctx, RetriesExhaustedError)
+	return contextDoneOr(ctx, ErrRetriesExhausted)
 }
 
 type backoffSession struct {
@@ -100,14 +100,14 @@ func newBackoffSession(ctx context.Context, iters int) (*backoffSession, error) 
 
 	dl, ok := ctx.Deadline()
 	if !ok {
-		return nil, MissingDeadlineError
+		return nil, ErrMissingDeadline
 	}
 
 	if ttd := dl.Sub(time.Now()); ttd > 0 {
 		return &backoffSession{now, ttd, math.Pow(float64(iters), backoffPower)}, nil
 	}
 
-	return nil, contextDoneOr(ctx, TimeWarpError)
+	return nil, contextDoneOr(ctx, ErrTimeWarp)
 }
 
 func (bo *backoffSession) sleep(ctx context.Context, i int) error {
