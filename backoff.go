@@ -1,4 +1,4 @@
-// Copyright © 2017 Tim Peoples <coders@toolman.org>
+// Copyright © 2018 Tim Peoples <coders@toolman.org>
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
