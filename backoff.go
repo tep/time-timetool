@@ -87,6 +87,14 @@ func RetryWithBackoff(ctx context.Context, iters int, retry RetryFunc) error {
 	return contextDoneOr(ctx, ErrRetriesExhausted)
 }
 
+// RetryWithBackoffDuration is a wrapper around RetryWithBackoff accepting
+// a Duration in leu of a Context.
+func RetryWithBackoffDuration(dur time.Duration, iters int, retry RetryFunc) error {
+	ctx, cancel := context.WithTimeout(context.Background(), dur)
+	defer cancel()
+	return RetryWithBackoff(ctx, iters, retry)
+}
+
 type backoffSession struct {
 	start       time.Time
 	timeout     time.Duration
