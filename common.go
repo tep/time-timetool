@@ -13,8 +13,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-// Package timetool provides tools and utilities for dealing with our most
-// preceious comodity: time.
+// Package timetool provides tools and utilities for dealing with that most
+// precious of commodities: time.
 package timetool // import "toolman.org/time/timetool"
 
 import "time"
