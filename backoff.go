@@ -26,24 +26,22 @@ const (
 	backoffPower = 3
 )
 
-var (
-	// ErrMissingDeadline is returned by functions expecting a Deadline
-	// but are passed a Context devoid of such nature.
-	ErrMissingDeadline = errors.New("context must have a deadline")
+// ErrMissingDeadline is returned by functions expecting a Deadline
+// but are passed a Context devoid of such nature.
+var ErrMissingDeadline = errors.New("context must have a deadline")
 
-	// ErrTooFewIterations is returned by RetryWithBackoff if the number of
-	// requested iterations is less than 2.
-	ErrTooFewIterations = errors.New("number of iterations must be at least 2")
+// ErrTooFewIterations is returned by RetryWithBackoff if the number of
+// requested iterations is less than 2.
+var ErrTooFewIterations = errors.New("number of iterations must be at least 2")
 
-	// ErrTimeWarp is returned by RetryWithBackoff in the freakishly uncommon
-	// event that a context ends up with a deadline in the past and a Done
-	// channel that does not return.
-	ErrTimeWarp = errors.New("valid context has deadline in the past")
+// ErrTimeWarp is returned by RetryWithBackoff in the freakishly uncommon
+// event that a context ends up with a deadline in the past and a Done
+// channel that does not return.
+var ErrTimeWarp = errors.New("valid context has deadline in the past")
 
-	// ErrRetriesExhausted is returned by RetryWithBackoff if all retry
-	// attempts have been unsuccessful.
-	ErrRetriesExhausted = errors.New("all retries exhausted")
-)
+// ErrRetriesExhausted is returned by RetryWithBackoff if all retry
+// attempts have been unsuccessful.
+var ErrRetriesExhausted = errors.New("all retries exhausted")
 
 // RetryFunc is a function passed to RetryWithBackoff that should be retried
 // until successful. It should return true if the operation was successful or
