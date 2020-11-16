@@ -24,6 +24,7 @@ import (
 	"context"
 	"errors"
 	"math"
+	"math/rand"
 	"time"
 )
 
@@ -48,14 +49,15 @@ var ErrTimeWarp = errors.New("valid context has deadline in the past")
 // attempts have been unsuccessful.
 var ErrRetriesExhausted = errors.New("all retries exhausted")
 
-// RetryFunc is a function passed to RetryWithBackoff that should be retried
-// until successful. It should return true if the operation was successful or
-// false if it should be retried after a brief delay. The function will be
-// passed a single int argument which is the current (zero based) iteration
-// number.
+// RetryFunc is the function provided to a retry operation that should be
+// executed until it succeeds, as indicated by its return value. i.e. If the
+// function returns false, it will be retried after a brief delay.
+//
+// The function will be passed a single int argument indicating the current
+// (zero based) iteration number.
 type RetryFunc func(i int) bool
 
-// RetryWithBackoff calls the RetryFunc retry a maximum of iters times until it
+// RetryWithBackoff calls the given RetryFunc a maximum of iters times until it
 // returns true. The provided context must have a defined deadline and the
 // number of iterations requested must be at least 2. Nil is returned if retry
 // returns true before the deadline expires and within the stated number of
@@ -67,6 +69,8 @@ type RetryFunc func(i int) bool
 // If the provided Context has no defined deadline, ErrMissingDeadline is
 // returned. ErrTooFewIterations will be returned if iters is less than 2.
 // If each call to retry returns false, ErrRetriesExhausted is returned.
+//
+// Deprecated: Please use *Backoff.Retry instead.
 func RetryWithBackoff(ctx context.Context, iters int, retry RetryFunc) error {
 	if iters < 2 {
 		return ErrTooFewIterations
@@ -88,6 +92,89 @@ func RetryWithBackoff(ctx context.Context, iters int, retry RetryFunc) error {
 	}
 
 	return contextDoneOr(ctx, ErrRetriesExhausted)
+}
+
+// Backoff defines the parameters for a set of retries with exponential
+// backoff.
+type Backoff struct {
+	// Iterations declares the maximum number execution attempts.
+	Iterations int
+
+	// Coefficient indicates the initial delay between attempts.
+	Coefficient time.Duration
+
+	// Jitter is a random modifier percentage applied to each delay period.
+	Jitter float64
+}
+
+// StdBackoff provides a Backoff with common parameters.
+var StdBackoff = &Backoff{5, time.Second, 0.1}
+
+// Retry calls the given RetryFunc up to b.Iterations times until it returns
+// true or the provided Context is cancelled, whichever comes first. If the
+// initial call to RetryFunc returns false, it is rerun immediately. Subsequent
+// executions are interleaved with an exponentially increasing delay based on
+// the receiver such that each delay is calculated as:
+//
+//     multiple = 2^(b.Iterations - 1)
+//     delay    = b.Coefficient * multiple ± (multiple * b.Jitter)
+//
+// If the receiver declares fewer than 2 iterations an error will be returned.
+//
+// The receiver's delay Coefficient must be a positive, non-zero value or
+// an error will be returned.
+//
+// If b.Jitter is 0, no Jitter will be applied. Otherwise, the Jitter value
+// must be in the range (0,100) or an error will be returned.
+//
+func (b *Backoff) Retry(ctx context.Context, retry RetryFunc) error {
+	if err := b.validate(); err != nil {
+		return err
+	}
+
+	for attempt := 0; attempt < b.Iterations; attempt++ {
+		if retry(attempt) {
+			return contextDoneOr(ctx, nil)
+		}
+
+		if attempt == 0 {
+			continue
+		}
+
+		backoff := float64(uint(1) << (uint(attempt) - 1))
+		if b.Jitter != 0 {
+			backoff += backoff * ((b.Jitter * rand.Float64()) - (b.Jitter / 2))
+		}
+
+		select {
+		case <-time.After(b.Coefficient * time.Duration(backoff)):
+			continue
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+
+	return contextDoneOr(ctx, ErrRetriesExhausted)
+}
+
+func (b *Backoff) validate() error {
+	if b == nil {
+		return errors.New("nil Backoff")
+	}
+
+	if b.Iterations < 2 {
+		return errors.New("too few iterations: must be 2 or more")
+	}
+
+	if b.Coefficient <= 0 {
+		return errors.New("bad delay Coefficient: must be a positive, non-zero value")
+	}
+
+	if b.Jitter != 0 && (b.Jitter < 0 || b.Jitter >= 100) {
+		return errors.New("invalid Jitter percentage: must be 0 < J < 100")
+	}
+
+	return nil
 }
 
 // RetryWithBackoffDuration is a wrapper around RetryWithBackoff accepting
