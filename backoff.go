@@ -112,12 +112,20 @@ var StdBackoff = &Backoff{5, time.Second, 0.1}
 
 // Retry calls the given RetryFunc up to b.Iterations times until it returns
 // true or the provided Context is cancelled, whichever comes first. If the
-// initial call to RetryFunc returns false, it is rerun immediately. Subsequent
-// executions are interleaved with an exponentially increasing delay based on
-// the receiver such that each delay is calculated as:
+// initial call to RetryFunc returns false (meaning it failed and a retry is
+// needed), the RetryFunc is rerun immediately. Subsequent execution attempts
+// (after the first) are interleaved with an exponentially increasing delay
+// based on the receiver such that each delay is calculated as:
 //
-//     multiple = 2^(b.Iterations - 1)
-//     delay    = b.Coefficient * multiple ± (multiple * b.Jitter)
+//     multiple  =  2^(attempt - 1)
+//     delay     =  b.Coefficient * multiple
+//
+// ...or, if b.Jitter is non zero:
+//
+//     multiple  =  2^(attempt - 1)
+// 		 jitter    =  (b.Jitter * random) - (b.Jitter / 2) / 100
+// 		 multiple +=  multiple * jitter
+//     delay     =  b.Coefficient * multiple
 //
 // If the receiver declares fewer than 2 iterations an error will be returned.
 //
@@ -141,13 +149,15 @@ func (b *Backoff) Retry(ctx context.Context, retry RetryFunc) error {
 			continue
 		}
 
-		backoff := float64(uint(1) << (uint(attempt) - 1))
+		multiple := float64(uint(1) << (uint(attempt) - 1))
+
 		if b.Jitter != 0 {
-			backoff += backoff * ((b.Jitter * rand.Float64()) - (b.Jitter / 2))
+			j := (((b.Jitter * rand.Float64()) - (b.Jitter / 2)) / 100)
+			multiple += multiple * j
 		}
 
 		select {
-		case <-time.After(b.Coefficient * time.Duration(backoff)):
+		case <-time.After(b.Coefficient * time.Duration(multiple)):
 			continue
 		case <-ctx.Done():
 			return ctx.Err()
