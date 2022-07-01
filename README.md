@@ -1,6 +1,5 @@
 
-# timetool [![Mit License][mit-img]][mit] [![GitHub Release][release-img]][release] [![GoDoc][godoc-img]][godoc] [![Go Report Card][reportcard-img]][repor    tcard]
-
+# timetool [![Mit License][mit-img]][mit] [![GitHub Release][release-img]][release] [![GoDoc][godoc-img]][godoc] [![Go Report Card][reportcard-img]][reportcard]
 `import "toolman.org/time/timetool"`
 
 Package timetool provides tools and utilities for dealing with our most
