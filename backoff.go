@@ -123,8 +123,8 @@ var StdBackoff = &Backoff{5, time.Second, 0.1}
 // ...or, if b.Jitter is non zero:
 //
 //     multiple  =  2^(attempt - 1)
-// 		 jitter    =  (b.Jitter * random) - (b.Jitter / 2) / 100
-// 		 multiple +=  multiple * jitter
+//     jitter    =  (b.Jitter * random) - (b.Jitter / 2) / 100
+//     multiple +=  multiple * jitter
 //     delay     =  b.Coefficient * multiple
 //
 // If the receiver declares fewer than 2 iterations an error will be returned.
