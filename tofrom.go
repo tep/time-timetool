@@ -24,6 +24,9 @@ import "time"
 
 // FromMillis interprets millis as milliseconds since the Epoch and returns
 // the equivalent time.Time value.
+//
+// Deprecated: As of Go v1.17, the standard library's time package provides
+// the function UnixMilli that exhibits the same behavior.
 func FromMillis(millis int64) time.Time {
 	sse := millis / 1000
 	mso := int64(time.Millisecond) * (millis - (sse * 1000))
@@ -33,6 +36,9 @@ func FromMillis(millis int64) time.Time {
 
 // ToMillis returns the number of milliseconds since the Epoch for the provided
 // time.Time value t.
+//
+// Deprecated: As of Go v1.17, the standard library's time package provides
+// the time.Time method UnixMilli that exhibits the same behavior.
 func ToMillis(t time.Time) int64 {
 	t = t.Round(time.Millisecond)
 	return t.UnixNano() / int64(time.Millisecond)
