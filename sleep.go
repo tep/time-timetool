@@ -29,6 +29,10 @@ import (
 // cancellation of a Context. Sleep returns ctx.Err() if cancelled by
 // the Context, otherwise it returns nil.
 func Sleep(ctx context.Context, d time.Duration) error {
+	if d == 0 {
+		return nil
+	}
+
 	var err error
 	ch := timeAfter(d)
 	select {
