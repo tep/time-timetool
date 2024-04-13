@@ -49,6 +49,11 @@ var ErrTimeWarp = errors.New("valid context has deadline in the past")
 // attempts have been unsuccessful.
 var ErrRetriesExhausted = errors.New("all retries exhausted")
 
+// ErrBadJitter is returned when an invalid jitter value has been requested.
+var ErrBadJitter = errors.New("invalid jitter value; must be [0.0, 100.0)")
+
+var ErrNegativeDelay = errors.New("negative delay value; time travel not yet supported")
+
 // RetryFunc is the function provided to a retry operation that should be
 // executed until it succeeds, as indicated by its return value. i.e. If the
 // function returns false, it will be retried after a brief delay.
@@ -110,6 +115,34 @@ type Backoff struct {
 // StdBackoff provides a Backoff with common parameters.
 var StdBackoff = &Backoff{5, time.Second, 0.1}
 
+// CalculateBackoff calculates a Backoff value for the given number of
+// iterations and a desired total delay time. An error is returned if iters
+// < 3, total < 0, or jitter is outside [0, 100).
+func CalculateBackoff(iters int, total time.Duration, jitter float64) (*Backoff, error) {
+	switch {
+	case iters < 3:
+		return nil, ErrTooFewIterations
+	case total < 0:
+		return nil, ErrNegativeDelay
+	case jitter < 0 || jitter >= 100:
+		return nil, ErrBadJitter
+	}
+
+	coef := time.Duration(float64(total) / float64(int((1<<(iters-2))-1)))
+
+	return &Backoff{Iterations: iters, Coefficient: coef, Jitter: jitter}, nil
+}
+
+// MustCalculateBackoff is a wrapper around CalculateBackoff that will panic if
+// an error is returned.
+func MustCalculateBackoff(iters int, total time.Duration, jitter float64) *Backoff {
+	b, err := CalculateBackoff(iters, total, jitter)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
 // Retry calls the given RetryFunc up to b.Iterations times until it returns
 // true or the provided Context is cancelled, whichever comes first. If the
 // initial call to RetryFunc returns false (meaning it failed and a retry is
@@ -117,15 +150,15 @@ var StdBackoff = &Backoff{5, time.Second, 0.1}
 // (after the first) are interleaved with an exponentially increasing delay
 // based on the receiver such that each delay is calculated as:
 //
-//     multiple  =  2^(attempt - 1)
-//     delay     =  b.Coefficient * multiple
+//	multiple  =  2^(attempt - 1)
+//	delay     =  b.Coefficient * multiple
 //
 // ...or, if b.Jitter is non zero:
 //
-//     multiple  =  2^(attempt - 1)
-//     jitter    =  (b.Jitter * random) - (b.Jitter / 2) / 100
-//     multiple +=  multiple * jitter
-//     delay     =  b.Coefficient * multiple
+//	multiple  =  2^(attempt - 1)
+//	jitter    =  (b.Jitter * random) - (b.Jitter / 2) / 100
+//	multiple +=  multiple * jitter
+//	delay     =  b.Coefficient * multiple
 //
 // If the receiver declares fewer than 2 iterations an error will be returned.
 //
@@ -156,11 +189,8 @@ func (b *Backoff) Retry(ctx context.Context, retry RetryFunc) error {
 			multiple += multiple * j
 		}
 
-		select {
-		case <-time.After(b.Coefficient * time.Duration(multiple)):
-			continue
-		case <-ctx.Done():
-			return ctx.Err()
+		if err := Sleep(ctx, b.Coefficient*time.Duration(multiple)); err != nil {
+			return err
 		}
 	}
 
