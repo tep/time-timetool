@@ -1,3 +1,3 @@
 module toolman.org/time/timetool
 
-go 1.12
+go 1.20
