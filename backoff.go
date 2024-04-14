@@ -22,7 +22,6 @@ package timetool
 
 import (
 	"context"
-	"errors"
 	"math/rand"
 	"time"
 )
@@ -30,28 +29,6 @@ import (
 const (
 	minIterations = 2
 )
-
-// ErrMissingDeadline is returned by functions expecting a Deadline
-// but are passed a Context devoid of such nature.
-var ErrMissingDeadline = errors.New("context must have a deadline")
-
-// ErrTooFewIterations is returned by RetryWithBackoff if the number of
-// requested iterations is less than 2.
-var ErrTooFewIterations = errors.New("number of iterations must be at least 2")
-
-// ErrTimeWarp is returned by RetryWithBackoff in the freakishly uncommon
-// event that a context ends up with a deadline in the past and a Done
-// channel that does not return.
-var ErrTimeWarp = errors.New("valid context has deadline in the past")
-
-// ErrRetriesExhausted is returned by RetryWithBackoff if all retry
-// attempts have been unsuccessful.
-var ErrRetriesExhausted = errors.New("all retries exhausted")
-
-// ErrBadJitter is returned when an invalid jitter value has been requested.
-var ErrBadJitter = errors.New("invalid jitter value; must be [0.0, 100.0)")
-
-var ErrNegativeDelay = errors.New("negative delay value; time travel not yet supported")
 
 // RetryFunc is the function provided to a retry operation that should be
 // executed until it succeeds, as indicated by its return value. i.e. If the

@@ -2,7 +2,6 @@ package timetool
 
 import (
 	"context"
-	"errors"
 	"math/rand"
 	"time"
 )
@@ -43,10 +42,6 @@ func NewNormalTicker(ctx context.Context, mean, stddev time.Duration) *NormalTic
 func (nt *NormalTicker) Stop() {
 	close(nt.done)
 }
-
-// ErrTickerActive is returned by the Err method if the ticker is still active
-// (i.e. it has not been stopped)
-var ErrTickerActive = errors.New("ticker is active")
 
 // Err returns an error indicating how the ticker was stopped. If the Stop
 // method was called, a nil error returned. If the constructor's Context has
