@@ -183,15 +183,16 @@ func (b Backoff) WithInitialWait(d time.Duration) *Backoff {
 // increasing delay based on the receiver such that each delay is calculated
 // as:
 //
-//	multiple  =  2 ** (attempt - 1)
+//	multiple  =  2 ** (attempt_num - 1) ± random_jitter
 //	delay     =  b.Coefficient * multiple
 //
-// ...or, if b.Jitter is non zero:
+// ...and, when the reciever's Jitter field is non-zero, 'random_jitter' is
+// defined as:
 //
-//	multiple  =  2^(attempt - 1)
+//	random    =  rand.Float64() // A value in the half-open interval [0.0,1.0)
 //	jitter    =  (b.Jitter * random) - (b.Jitter / 2) / 100
-//	multiple +=  multiple * jitter
-//	delay     =  b.Coefficient * multiple
+//
+// ...or, rather... plus or minus jitter-percent over two.
 //
 // If the receiver declares fewer than 2 iterations an error will be returned.
 //
